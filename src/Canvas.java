@@ -2,6 +2,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.Line2D;
 import java.awt.image.*;
 
 import java.io.*;
@@ -21,7 +22,7 @@ public class Canvas extends JPanel {
         public void run() {
             while (true) {
                 try {
-                    drawShape(points.take());
+                    stamp(points.take());
                 } catch (InterruptedException e) {
                     // Do nothing
                 }
@@ -35,9 +36,10 @@ public class Canvas extends JPanel {
     private int shapeSize;
     private Color color = Color.BLACK;
     private Shape shape = Shape.CIRCLE;
-    private boolean modified;
-    private File currentFile = null;
+    private boolean modified, saved = false;
+    private File currentFile = createNewFile();
     private DrawingThread drawWorker = new DrawingThread();
+    public static final String DEFAULT_SAVE_DIR = System.getProperty("user.home");
 
     public Canvas() {
         this.setBackground(Color.GRAY);
@@ -80,6 +82,14 @@ public class Canvas extends JPanel {
     public boolean isModified() {
         return modified;
     }
+    
+    public boolean isSaved() {
+        return saved;
+    }
+    
+    public void setSaved(boolean saved) {
+        this.saved = saved;
+    }
 
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -107,30 +117,8 @@ public class Canvas extends JPanel {
         Graphics2D gc = image.createGraphics();
         gc.setColor(Color.WHITE);
         gc.fillRect(0, 0, w, h);
-        setModified(false);
+        this.setModified(false);
         repaint();
-    }
-
-    public void saveImage() {
-        if (currentFile == null) {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setSelectedFile(new File("doodle.png"));
-            int returnVal = chooser.showSaveDialog(null);
-            if (returnVal == JFileChooser.APPROVE_OPTION) {
-                currentFile = chooser.getSelectedFile();
-            } else {
-                return;
-            }
-        }
-
-        try {
-            ImageIO.write(image, "png", currentFile);
-            setModified(false);
-        } catch (IOException exc) {
-            System.err.println("Exception thrown during write");
-            // Handle exception
-        }
-        return;
     }
 
     public void setColor(Color c) {
@@ -147,6 +135,14 @@ public class Canvas extends JPanel {
     }
 
     public void setModified(boolean b) {
+        String newTitle;
+        if (b) {
+            newTitle = "Doodler! - " + currentFile.getName() + " (Modified)";
+        } else {
+            newTitle = "Doodler! - " + currentFile.getName();
+        }
+        
+        ((JFrame)this.getTopLevelAncestor()).setTitle(newTitle);
         modified = b;
     }
 
@@ -157,30 +153,20 @@ public class Canvas extends JPanel {
     public void setShapeSize(int s) {
         this.shapeSize = s;
     }
+    
+    private void pen(Point p1, Point p2) {
+        int size = shapeSize;
+        Graphics2D tempg = image.createGraphics();
+        tempg.setColor(color);
+        tempg.setStroke(new BasicStroke(size));
+        tempg.draw(new Line2D.Float(p1, p2));
+    }
 
-    private void drawShape(Point p) {
+    private void stamp(Point p) {
         p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
         Graphics2D tempg = image.createGraphics();
         tempg.setColor(color);
-        switch (shape) {
-        case SQUARE:
-            tempg.fillRect(p.x - shapeSize / 2, p.y - shapeSize / 2, shapeSize,
-                    shapeSize);
-            break;
-
-        case CIRCLE:
-            tempg.fillOval(p.x - shapeSize / 2, p.y - shapeSize / 2, shapeSize,
-                    shapeSize);
-            break;
-
-        case TRIANGLE:
-            int[] xPoints = { p.x - shapeSize / 2, p.x + shapeSize / 2, p.x };
-            int[] yPoints = { p.y + shapeSize / 2, p.y + shapeSize / 2,
-                    p.y - shapeSize / 2 };
-            tempg.fillPolygon(xPoints, yPoints, 3);
-            break;
-        }
-
+        tempg.fill(shape.render(p, shapeSize));
         setModified(true);
         repaint();
     }
@@ -196,5 +182,17 @@ public class Canvas extends JPanel {
         tempg.setColor(Color.WHITE);
         tempg.fillRect(0, 0, this.getWidth(), this.getHeight());
         tempg.drawImage(oldImage, null, 0, 0);
+    }
+    
+    private File createNewFile() {
+        String name = "doodle";
+        File newFile = new File (DEFAULT_SAVE_DIR + File.separator + name + ".png");
+        int count = 1;
+        while (newFile.exists()) {
+            name = "doodle (" + count + ")";
+            newFile = new File (DEFAULT_SAVE_DIR + File.separator + name + ".png");
+            ++count;
+        }
+        return new File (DEFAULT_SAVE_DIR + File.separator + name + ".png");
     }
 }
