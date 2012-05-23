@@ -42,6 +42,7 @@ public class Canvas extends JPanel {
     public Canvas() {
         this.setBackground(Color.GRAY);
         drawWorker.start();
+        
 
         addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
@@ -89,7 +90,6 @@ public class Canvas extends JPanel {
         }
 
         tempg.drawImage(image, null, CANVAS_MARGIN, CANVAS_MARGIN);
-        setModified(true);
     }
 
     public void reset() {
@@ -107,26 +107,30 @@ public class Canvas extends JPanel {
         Graphics2D gc = image.createGraphics();
         gc.setColor(Color.WHITE);
         gc.fillRect(0, 0, w, h);
+        setModified(false);
         repaint();
     }
 
-    public File saveImage() {
+    public void saveImage() {
         if (currentFile == null) {
             JFileChooser chooser = new JFileChooser();
             chooser.setSelectedFile(new File("doodle.png"));
             int returnVal = chooser.showSaveDialog(null);
             if (returnVal == JFileChooser.APPROVE_OPTION) {
                 currentFile = chooser.getSelectedFile();
+            } else {
+                return;
             }
         }
 
         try {
             ImageIO.write(image, "png", currentFile);
+            setModified(false);
         } catch (IOException exc) {
             System.err.println("Exception thrown during write");
             // Handle exception
         }
-        return currentFile;
+        return;
     }
 
     public void setColor(Color c) {
@@ -155,6 +159,7 @@ public class Canvas extends JPanel {
     }
 
     private void drawShape(Point p) {
+        p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
         Graphics2D tempg = image.createGraphics();
         tempg.setColor(color);
         switch (shape) {
@@ -176,6 +181,7 @@ public class Canvas extends JPanel {
             break;
         }
 
+        setModified(true);
         repaint();
     }
 
