@@ -7,13 +7,13 @@ import javax.swing.ImageIcon;
 import javax.swing.JToggleButton;
 
 
-public enum Tools {
+public enum Tool {
     PEN, STAMP, KEY_A;
     
     private AbstractButton button;
     private static final int BUTTON_MARGIN = 5;
     
-    private Tools () {
+    private Tool () {
         Icon icon = new ImageIcon("resources" + File.separator + this.name() + ".png");
         
         button = new JToggleButton(icon);
@@ -22,9 +22,9 @@ public enum Tools {
     }
     
     public AbstractButton getButton() {
-        if (this.name().equals(PEN.name())) {
-            button.setSelected(true);
-        }
+//        if (this.name().equals(PEN.name())) {
+//            button.setSelected(true);
+//        }
         return button;
     }
     

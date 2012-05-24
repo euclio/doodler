@@ -53,14 +53,19 @@ public class DoodleGUI extends JFrame {
         // Create the Tools Pane
         JPanel tools = new JPanel();
         tools.setBorder(BorderFactory.createTitledBorder("Tools"));
-        tools.setLayout(new GridLayout(2, Tools.values().length / 2, TOOL_H_GAP, TOOL_V_GAP));
+        tools.setLayout(new GridLayout(2, Tool.values().length / 2, TOOL_H_GAP, TOOL_V_GAP));
         ButtonGroup toolsGroup = new ButtonGroup();
         
-        
         // Enumerate through all tools
-        for (Tools t : Tools.values()) {
+        for (final Tool t : Tool.values()) {
+            t.getButton().addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    canvas.setTool(t);
+                }
+            });
             tools.add(t.getButton());
             toolsGroup.add(t.getButton());
+            
         }
         
         options.add(tools);
