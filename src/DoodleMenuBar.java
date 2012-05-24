@@ -160,7 +160,7 @@ public class DoodleMenuBar extends JMenuBar {
             }
         }
 
-        final JFileChooser chooser = new JFileChooser(Canvas.DEFAULT_SAVE_DIR);
+        final JFileChooser chooser = new JFileChooser(canvas.getSaveDirectory());
         int returnVal = chooser.showOpenDialog(rootPane);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             File newFile = chooser.getSelectedFile();
@@ -180,8 +180,8 @@ public class DoodleMenuBar extends JMenuBar {
     }
 
     public void saveAs() {
-        JFileChooser chooser = new JFileChooser(Canvas.DEFAULT_SAVE_DIR);
-        chooser.setSelectedFile(canvas.getCurrentFile());
+        JFileChooser chooser = new JFileChooser(canvas.getSaveDirectory());
+        chooser.setSelectedFile(canvas.getSaveFile());
         int returnVal = chooser.showSaveDialog(rootPane);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             if (chooser.getSelectedFile().exists()) {
@@ -199,7 +199,7 @@ public class DoodleMenuBar extends JMenuBar {
     public void saveFile() {
         if (canvas.isSaved()) {
             try {
-                ImageIO.write(canvas.getImage(), "png", canvas.getCurrentFile());
+                ImageIO.write(canvas.getImage(), "png", canvas.getSaveFile());
                 canvas.setModified(false);
             } catch (IOException exc) {
                 System.err.println("Exception thrown during write");
