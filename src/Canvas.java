@@ -1,5 +1,5 @@
-import javax.imageio.ImageIO;
 import javax.swing.*;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Line2D;
@@ -11,18 +11,45 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 @SuppressWarnings("serial")
 public class Canvas extends JPanel {
-    private BlockingQueue<Point> points = new LinkedBlockingQueue<Point>();
-
     private class DrawingThread extends Thread {
-        public void add(Point p) {
-            points.add(p);
+
+        private BlockingQueue<Point> draggedPoints = new LinkedBlockingQueue<Point>();
+        private Point pressedPoint, releasedPoint, lastPoint, currentPoint;
+
+        public void addDraggedPoint(Point p) {
+            p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
+            draggedPoints.add(p);
+
+        }
+
+        public void addPressedPoint(Point p) {
+            p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
+            lastPoint = pressedPoint = p;
+        }
+
+        public void addReleasedPoint(Point p) {
+            p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
+            releasedPoint = p;
+
         }
 
         @Override
         public void run() {
             while (true) {
                 try {
-                    stamp(points.take());
+                    switch (tool) {
+                    case PEN:
+                        currentPoint = draggedPoints.take();
+                        pen(lastPoint, currentPoint);
+                        lastPoint = currentPoint;
+                        break;
+                    case STAMP:
+                        stamp(draggedPoints.take());
+                        break;
+                    default:
+                        throw new IllegalStateException("Bad tool selected");
+                    }
+
                 } catch (InterruptedException e) {
                     // Do nothing
                 }
@@ -31,64 +58,75 @@ public class Canvas extends JPanel {
     }
 
     private static final int CANVAS_MARGIN = 10;
+    private static final int PEN_SIZE_CONVERSION = 5;
 
     private BufferedImage image = null;
-    private int shapeSize;
-    private Color color = Color.BLACK;
-    private Shape shape = Shape.CIRCLE;
+    private Tool tool;
+    private int toolSize;
+    private Color color;
+    private Shape shape;
     private boolean modified, saved = false;
-    private File currentFile = createNewFile();
+    private File saveFile = createNewFile();
     private DrawingThread drawWorker = new DrawingThread();
-    public static final String DEFAULT_SAVE_DIR = System.getProperty("user.home");
+    private String saveDirectory;
 
-    public Canvas() {
+    public Canvas(Tool tool, Color color, Shape shape, String directory) {
+        this.tool = tool;
+        this.color = color;
+        this.shape = shape;
+        this.saveDirectory = directory;
         this.setBackground(Color.GRAY);
-        drawWorker.start();
         
 
-        addMouseListener(new MouseAdapter() {
+        this.addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
-                drawWorker.add(e.getPoint());
+                drawWorker.addPressedPoint(e.getPoint());
+            }
+
+            public void mouseReleased(MouseEvent e) {
+                drawWorker.addReleasedPoint(e.getPoint());
             }
         });
 
-        addMouseMotionListener(new MouseAdapter() {
+        this.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseDragged(MouseEvent e) {
-                drawWorker.add(e.getPoint());
+                drawWorker.addDraggedPoint(e.getPoint());
             }
         });
+        
+        drawWorker.start();
     }
 
     public Color getColor() {
         return color;
     }
 
-    public File getCurrentFile() {
-        return currentFile;
+    public File getSaveFile() {
+        return saveFile;
     }
 
     public BufferedImage getImage() {
         return image;
     }
 
+    public String getSaveDirectory() {
+        return saveDirectory;
+    }
+
     public Shape getShape() {
         return shape;
     }
 
-    public int getShapeSize() {
-        return shapeSize;
+    public int getToolSize() {
+        return toolSize;
     }
 
     public boolean isModified() {
         return modified;
     }
-    
+
     public boolean isSaved() {
         return saved;
-    }
-    
-    public void setSaved(boolean saved) {
-        this.saved = saved;
     }
 
     public void paintComponent(Graphics g) {
@@ -104,7 +142,7 @@ public class Canvas extends JPanel {
 
     public void reset() {
         int w, h;
-        
+
         if (image == null) {
             w = this.getWidth() - CANVAS_MARGIN * 2;
             h = this.getHeight() - CANVAS_MARGIN * 2;
@@ -112,7 +150,7 @@ public class Canvas extends JPanel {
             w = image.getWidth();
             h = image.getHeight();
         }
-        
+
         image = (BufferedImage) this.createImage(w, h);
         Graphics2D gc = image.createGraphics();
         gc.setColor(Color.WHITE);
@@ -122,11 +160,11 @@ public class Canvas extends JPanel {
     }
 
     public void setColor(Color c) {
-        color = c;
+        this.color = c;
     }
 
     public void setCurrentFile(File f) {
-        currentFile = f;
+        this.saveFile = f;
     }
 
     public void setImage(BufferedImage b) {
@@ -137,36 +175,53 @@ public class Canvas extends JPanel {
     public void setModified(boolean b) {
         String newTitle;
         if (b) {
-            newTitle = "Doodler! - " + currentFile.getName() + " (Modified)";
+            newTitle = "Doodler! - " + saveFile.getName() + " (Modified)";
         } else {
-            newTitle = "Doodler! - " + currentFile.getName();
+            newTitle = "Doodler! - " + saveFile.getName();
         }
-        
-        ((JFrame)this.getTopLevelAncestor()).setTitle(newTitle);
+
+        ((JFrame) this.getTopLevelAncestor()).setTitle(newTitle);
         modified = b;
     }
 
+    public void setSaved(boolean saved) {
+        this.saved = saved;
+    }
+
+    public void setSaveDirectory(String directory) {
+        this.saveDirectory = directory;
+    }
+
     public void setShape(Shape s) {
-        shape = s;
+        this.shape = s;
     }
 
     public void setShapeSize(int s) {
-        this.shapeSize = s;
-    }
-    
-    private void pen(Point p1, Point p2) {
-        int size = shapeSize;
-        Graphics2D tempg = image.createGraphics();
-        tempg.setColor(color);
-        tempg.setStroke(new BasicStroke(size));
-        tempg.draw(new Line2D.Float(p1, p2));
+        this.toolSize = s;
     }
 
-    private void stamp(Point p) {
-        p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
+    public void setTool(Tool t) {
+        this.tool = t;
+    }
+
+    private File createNewFile() {
+        String name = "doodle";
+        File newFile = new File(saveDirectory + File.separator + name + ".png");
+        int count = 1;
+        while (newFile.exists()) {
+            name = "doodle (" + count + ")";
+            newFile = new File(saveDirectory + File.separator + name + ".png");
+            ++count;
+        }
+        return new File(saveDirectory + File.separator + name + ".png");
+    }
+
+    private void pen(Point p1, Point p2) {
         Graphics2D tempg = image.createGraphics();
         tempg.setColor(color);
-        tempg.fill(shape.render(p, shapeSize));
+        tempg.setStroke(new BasicStroke(toolSize / PEN_SIZE_CONVERSION,
+                BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        tempg.draw(new Line2D.Float(p1, p2));
         setModified(true);
         repaint();
     }
@@ -183,16 +238,12 @@ public class Canvas extends JPanel {
         tempg.fillRect(0, 0, this.getWidth(), this.getHeight());
         tempg.drawImage(oldImage, null, 0, 0);
     }
-    
-    private File createNewFile() {
-        String name = "doodle";
-        File newFile = new File (DEFAULT_SAVE_DIR + File.separator + name + ".png");
-        int count = 1;
-        while (newFile.exists()) {
-            name = "doodle (" + count + ")";
-            newFile = new File (DEFAULT_SAVE_DIR + File.separator + name + ".png");
-            ++count;
-        }
-        return new File (DEFAULT_SAVE_DIR + File.separator + name + ".png");
+
+    private void stamp(Point p) {
+        Graphics2D tempg = image.createGraphics();
+        tempg.setColor(color);
+        tempg.fill(shape.render(p, toolSize));
+        setModified(true);
+        repaint();
     }
 }
