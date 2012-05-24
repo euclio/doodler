@@ -13,12 +13,18 @@ public class DoodleGUI extends JFrame {
     private static final int SIZE_MAX_VAL = 200;
     private static final int SIZE_MIN_VAL = 5;
     private static final int SIZE_MINOR_TICKS = 10;
+    private static final int COLOR_PREVIEW_SIZE = 30;
     private static final int WINDOW_HEIGHT = 768;
     private static final int WINDOW_WIDTH = 1024;
     private static final int WINDOW_X = 50;
     private static final int WINDOW_Y = 50;
     private static final int TOOL_H_GAP = 4;
     private static final int TOOL_V_GAP = 2;
+    private static final Tool DEFAULT_TOOL = Tool.PEN;
+    private static final Color DEFAULT_COLOR = Color.BLACK;
+    private static final Shape DEFAULT_SHAPE = Shape.CIRCLE;
+    private static final String DEFAULT_SAVE_DIRECTORY = System
+            .getProperty("user.home");
 
     public DoodleGUI(String title) {
         super(title);
@@ -46,28 +52,37 @@ public class DoodleGUI extends JFrame {
     private void createAndShowGUI() {
         // Initialize the main panes of the GUI
         final JPanel options = new JPanel();
-        final Canvas canvas = new Canvas();
+        final Canvas canvas = new Canvas(DEFAULT_TOOL, DEFAULT_COLOR,
+                DEFAULT_SHAPE, DEFAULT_SAVE_DIRECTORY);
         final DoodleMenuBar menuBar = new DoodleMenuBar(canvas);
 
         // Add the panels within the options pane
         // Create the Tools Pane
         JPanel tools = new JPanel();
         tools.setBorder(BorderFactory.createTitledBorder("Tools"));
-        tools.setLayout(new GridLayout(2, Tool.values().length / 2, TOOL_H_GAP, TOOL_V_GAP));
+        tools.setLayout(new GridLayout(2, Tool.values().length / 2, TOOL_H_GAP,
+                TOOL_V_GAP));
         ButtonGroup toolsGroup = new ButtonGroup();
-        
+
         // Enumerate through all tools
         for (final Tool t : Tool.values()) {
+            // Add the listener for tool changes
             t.getButton().addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     canvas.setTool(t);
                 }
             });
-            tools.add(t.getButton());
+
             toolsGroup.add(t.getButton());
-            
+            tools.add(t.getButton());
+
+            // Select the default tool
+            if (t == DEFAULT_TOOL) {
+                t.getButton().doClick();
+            }
         }
-        
+
+        // Add the tools pane to the options panel
         options.add(tools);
 
         // Initialize the size panel
@@ -109,9 +124,9 @@ public class DoodleGUI extends JFrame {
         final JLabel colorLabel = new JLabel();
         colorLabel.setBackground(canvas.getColor());
         colorLabel.setOpaque(true);
-        final Dimension labelDimension = new Dimension(30, 30);
-        colorLabel.setSize(labelDimension);
-        colorLabel.setPreferredSize(labelDimension);
+        colorLabel.setSize(COLOR_PREVIEW_SIZE, COLOR_PREVIEW_SIZE);
+        colorLabel.setPreferredSize(new Dimension(COLOR_PREVIEW_SIZE,
+                COLOR_PREVIEW_SIZE));
 
         // Class to listen for color changes
         colorLabel.addMouseListener(new MouseAdapter() {
@@ -163,6 +178,7 @@ public class DoodleGUI extends JFrame {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
+                // Runs the menu exit routine
                 menuBar.exit();
             }
         });
