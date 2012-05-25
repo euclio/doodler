@@ -12,9 +12,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 @SuppressWarnings("serial")
 public class Canvas extends JPanel {
     private class DrawingThread extends Thread {
-
         private BlockingQueue<Point> draggedPoints = new LinkedBlockingQueue<Point>();
-        private Point pressedPoint, releasedPoint, lastPoint, currentPoint;
+        private Point pressedPoint, releasedPoint;
+        private final Point END_OF_STREAM = new Point(Integer.MAX_VALUE,
+                Integer.MAX_VALUE);
 
         public void addDraggedPoint(Point p) {
             p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
@@ -24,27 +25,44 @@ public class Canvas extends JPanel {
 
         public void addPressedPoint(Point p) {
             p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
-            lastPoint = pressedPoint = p;
+            pressedPoint = p;
+            synchronized (this) {
+                this.notify();
+            }
         }
 
         public void addReleasedPoint(Point p) {
             p.translate(-CANVAS_MARGIN, -CANVAS_MARGIN);
             releasedPoint = p;
-
+            draggedPoints.add(END_OF_STREAM);
         }
 
         @Override
         public void run() {
             while (true) {
                 try {
+                    synchronized (this) {
+                        this.wait();
+                    }
                     switch (tool) {
                     case PEN:
-                        currentPoint = draggedPoints.take();
-                        pen(lastPoint, currentPoint);
-                        lastPoint = currentPoint;
+                        Point lastPoint = pressedPoint;
+                        while (true) {
+                            Point currentPoint = draggedPoints.take();
+                            if (currentPoint.equals(END_OF_STREAM))
+                                break;
+                            pen(lastPoint, currentPoint);
+                            lastPoint = currentPoint;
+                        }
                         break;
                     case STAMP:
-                        stamp(draggedPoints.take());
+                        while (true) {
+                            Point currentPoint = draggedPoints.take();
+                            if (currentPoint.equals(END_OF_STREAM))
+                                break;
+                            stamp(currentPoint);
+                        }
+                        stamp(releasedPoint);
                         break;
                     default:
                         throw new IllegalStateException("Bad tool selected");
@@ -76,7 +94,6 @@ public class Canvas extends JPanel {
         this.shape = shape;
         this.saveDirectory = directory;
         this.setBackground(Color.GRAY);
-        
 
         this.addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
@@ -93,7 +110,7 @@ public class Canvas extends JPanel {
                 drawWorker.addDraggedPoint(e.getPoint());
             }
         });
-        
+
         drawWorker.start();
     }
 
