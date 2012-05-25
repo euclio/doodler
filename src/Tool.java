@@ -7,7 +7,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JToggleButton;
 
 public enum Tool {
-    PEN, STAMP, KEY_A;
+    PEN, STAMP;
 
     private AbstractButton button;
     private static final int BUTTON_MARGIN = 5;
