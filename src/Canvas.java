@@ -12,6 +12,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 @SuppressWarnings("serial")
 public class Canvas extends JPanel {
     private class DrawingThread extends Thread {
+        private static final int STAMP_FREQUENCY = 15;
+        
         private BlockingQueue<Point> draggedPoints = new LinkedBlockingQueue<Point>();
         private Point pressedPoint, releasedPoint;
         private final Point END_OF_STREAM = new Point(Integer.MAX_VALUE,
@@ -56,11 +58,18 @@ public class Canvas extends JPanel {
                         }
                         break;
                     case STAMP:
+                        int counter = 0;
                         while (true) {
                             Point currentPoint = draggedPoints.take();
                             if (currentPoint.equals(END_OF_STREAM))
                                 break;
-                            stamp(currentPoint);
+                            else if (counter == STAMP_FREQUENCY) {
+                                stamp(currentPoint);
+                                counter = 0;
+                            } else {
+                                ++counter;
+                            }
+                            
                         }
                         stamp(releasedPoint);
                         break;
