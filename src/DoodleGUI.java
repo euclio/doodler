@@ -182,6 +182,6 @@ public class DoodleGUI extends JFrame {
         this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         this.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
         this.setMinimumSize(this.getLayout().minimumLayoutSize(this));
-        this.setVisible(true);
+        this.setLocationRelativeTo(null);
     }
 }
