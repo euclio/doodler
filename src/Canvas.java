@@ -243,6 +243,7 @@ public class Canvas extends JPanel {
         repaint();
     }
 
+    @SuppressWarnings("unused")
     private void resizeCanvas() {
         if (this.getWidth() <= 0 || this.getHeight() <= 0) {
             return;
