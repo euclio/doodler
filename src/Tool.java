@@ -13,8 +13,8 @@ public enum Tool {
     private static final int BUTTON_MARGIN = 5;
 
     private Tool() {
-        Icon icon = new ImageIcon("resources" + File.separator + this.name()
-                + ".png");
+        Icon icon = new ImageIcon(getClass().getResource(
+                this.name().toLowerCase() + ".png"));
 
         button = new JToggleButton(icon);
 
